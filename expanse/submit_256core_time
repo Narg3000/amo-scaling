@@ -1,0 +1,30 @@
+#!/bin/bash
+
+#SBATCH --job-name="RMTTest"
+#SBATCH --output="rmttest.%j.%N.out"
+#SBATCH --error="rmttest.%j.%N.out"
+#SBATCH --partition=compute
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=128 
+#SBATCH --mem=249325M 
+#SBATCH --account=TG-MCA08X034
+#SBATCH --export=ALL
+#SBATCH -t 01:00:00
+
+module purge
+module load cpu/0.17.3b
+module load gcc/10.2.0/npcyll4
+module load openmpi/4.1.3/oq3qvsv
+module load netlib-lapack/3.9.1/scl6nc5
+module load cmake/3.21.4/teqow32
+module load slurm
+
+
+STARTTIME=$(date +"%s")
+
+srun --mpi=pmi2 -n 256 /expanse/lustre/projects/dra100/abauman/rmt/build/bin/rmt.x >> log.out
+
+TOTALTIME=$(expr $(date +"%s") - $STARTTIME)
+
+NEWLINE=$'\n'
+echo $"$NEWLINE --------------------$NEWLINE Run took $TOTALTIME s" >> log.out
