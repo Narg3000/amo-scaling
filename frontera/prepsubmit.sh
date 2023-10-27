@@ -50,7 +50,7 @@ PARTT=""
 RNTME=""
 EMAIL=""
 RMTPT=""
-SENDMAIL=1
+SENDMAIL="1"
 
 for i in "${args[@]}"; do
     
@@ -94,7 +94,7 @@ fi
 
 # Set the default partition 
 if [[ -z $PARTT ]]; then
-    if [[ $NODES -l 3 ]]; then
+    if [[ $NODES -lt 3 ]]; then
         PARTT="small"
     elif [[ $NODES -ge 3 ]]; then
         PARTT="normal"
@@ -103,7 +103,7 @@ fi
 
 # Do some email stuff 
 if [[ -n $EMAIL ]]; then
-    SENDMAIL=0
+    SENDMAIL="0"
 fi
 
 # Find the RMT executable 
@@ -112,20 +112,23 @@ if [[ -z $RMTPT ]]; then
 fi
 
 # Jobtime default
-if [[ -z $RNTME ]]:
+if [[ -z $RNTME ]]; then 
     RNTME="01:00:00"
 fi
 
 # Prepare Files
 TIME=$(date +"%s")
-WORKPATH="$WORK/$JOBNAME$TIME/"
+WORKPATH="$WORK/$JOBNAME$TIME"
 mkdir $WORKPATH
 #cd $INDIR
-cp -r $INDIR/. $WORKPATH
+cp -r $INDIR/. $WORKPATH/
 
+RMTPT=$(realpath $RMTPT)
+MVRMT="1"
 if [[ ${RMTPT:0:${#HOME}} = $HOME ]]; then
     cp -a $RMTPT $WORKPATH/rmt.x
     RMTPT=$WORKPATH/rmt.x
+    MVRMT="0"
 fi
 
 # Directory to put all of the outputs to 
@@ -142,7 +145,7 @@ echo "#SBATCH -p $PARTT" >> submission
 echo "#SBATCH -N $NODES" >> submission
 echo "#SBATCH -n $TASKS" >> submission
 echo "#SBATCH -t $RNTME" >> submission
-if SENDMAIL; then
+if [[ $SENDMAIL -eq 1 ]]; then
     echo "#SBATCH --mail-type=all" >> submission
     echo "#SBATCH --mail-user=$EMAIL" >> submission
 fi
@@ -154,6 +157,9 @@ echo 'TOTALTIME=$(expr $(date +"%s") - $STARTTIME)' >> submission
 echo "NEWLINE=$'\n'" >> submission
 echo 'echo $"$NEWLINE --------------------"' >> submission
 echo "echo \"Run took \$TOTALTIME s\" >> $JOBNAME.out" >> submission
+if [[ $MVRMT -eq 0 ]]; then
+    echo "rm rmt.x" >> submission
+fi 
 echo "cp -rf . $WRITEOUT" >> submission
 echo "cd .. && rm -rf $WORKPATH" >> submission
 
