@@ -13,10 +13,10 @@
 
 
 #Input arguments:
-args=($1,$2,$3,$4,$5,$6,$7,$8)
+args=($1 $2 $3 $4 $5 $6 $7 $8)
+#echo "$args"
 NODECORES=56
-DEFRMTPT="$HOME/rmt/bin/rmt.x"
-
+DEFRMTPT="$WORK/rmt/build/bin/rmt.x"
 
 # This handels the help menu 
 printhelp() {
@@ -29,9 +29,9 @@ printhelp() {
 }
 
 
-pos1 = $1
+pos1=$1
 # if the first argument exists and is help...
-if ([[ -n $pos1 ]] && ([[ ${pos1,,} = "help" ]] || [[ ${pos1,,} = 'h' ]])); then
+if ([[ ${pos1,,} = "--help" ]] || [[ ${pos1,,} = '-h' ]]); then
     printhelp
     exit 0
 # if there are no arguments...
@@ -52,7 +52,8 @@ EMAIL=""
 RMTPT=""
 SENDMAIL=1
 
-for i in args; do
+for i in "${args[@]}"; do
+    
     if [[ ${i:0:2} = "-j" ]]; then
         JOBNAME=${i:3}
     elif [[ ${i:0:2} = "-i" ]]; then
@@ -72,12 +73,12 @@ for i in args; do
     fi
 done
 # Make sure all required args are met
-if [[ -z $JOBNAME ]] || [[ -z $INDIR ]] || [[ -z $NODES]] || [[ -z $TASKS]]; then
+if ([[ -z $JOBNAME ]] || [[ -z $INDIR ]] || [[ -z $NODES ]] || [[ -z $TASKS ]]); then
     echo "Missing required argument but hell if I'm telling you which"
     exit 2
 fi 
 # Make sure slurm isn't going to bitch at me
-if [[ $(echo "$NODES*$NODECORES" | bc ) -le $TASKS ]]; then 
+if [[ $(echo "$NODES*$NODECORES" | bc) -le $TASKS ]]; then 
     echo "We're gonna need a bigger boat... (request more nodes)"
     exit 3
 fi
@@ -113,6 +114,7 @@ fi
 # Jobtime default
 if [[ -z $RNTME ]]:
     RNTME="01:00:00"
+fi
 
 # Prepare Files
 TIME=$(date +"%s")
@@ -124,6 +126,7 @@ cp -r $INDIR/. $WORKPATH
 if [[ ${RMTPT:0:${#HOME}} = $HOME ]]; then
     cp -a $RMTPT $WORKPATH/rmt.x
     RMTPT=$WORKPATH/rmt.x
+fi
 
 # Directory to put all of the outputs to 
 WRITEOUT="$PWD/$JOBNAME$TIME.out"
@@ -142,16 +145,17 @@ echo "#SBATCH -t $RNTME" >> submission
 if SENDMAIL; then
     echo "#SBATCH --mail-type=all" >> submission
     echo "#SBATCH --mail-user=$EMAIL" >> submission
+fi
 
-echo "OUTDIR=$INDIR" >> submission
+echo "cd $WORKPATH" >> submission
 echo 'STARTTIME=$(date +"%s")' >> submission 
 echo "ibrun $RMTPT >> $JOBNAME.log" >> submission
 echo 'TOTALTIME=$(expr $(date +"%s") - $STARTTIME)' >> submission
 echo "NEWLINE=$'\n'" >> submission
 echo 'echo $"$NEWLINE --------------------"' >> submission
 echo "echo \"Run took \$TOTALTIME s\" >> $JOBNAME.out" >> submission
-echo "cp -r . $WRITEOUT" >> submission
-echo "cd .. && rm -rf $WORKPATH"
+echo "cp -rf . $WRITEOUT" >> submission
+echo "cd .. && rm -rf $WORKPATH" >> submission
 
 # This will queue the job
 
